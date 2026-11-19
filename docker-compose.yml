@@ -1,0 +1,55 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: scopeflow
+      POSTGRES_PASSWORD: scopeflow
+      POSTGRES_DB: scopeflow
+    ports:
+      # 5433 on the host: 5432 is often taken by a locally installed PostgreSQL
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    mem_limit: 512m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U scopeflow"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  qdrant:
+    image: qdrant/qdrant:latest
+    ports:
+      - "6333:6333"
+    volumes:
+      - qdrant_data:/qdrant/storage
+    mem_limit: 768m
+
+  letta:
+    # Pinned: last release of the classic Letta server (REST API, memory blocks,
+    # archival memory). `latest` / 0.31+ ship a different product (Letta Code).
+    image: letta/letta:0.16.8
+    ports:
+      - "8283:8283"
+    environment:
+      # Ollama runs natively on the host (Metal GPU), not in Docker
+      # Letta strips any /v1 suffix here and then calls /embeddings (404 on Ollama),
+      # so agents must pass an explicit embedding_config with the /v1 endpoint.
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      # Redis is required by Letta to cancel active runs (messages.cancel).
+      LETTA_REDIS_HOST: redis
+      LETTA_REDIS_PORT: "6379"
+    volumes:
+      - letta_data:/var/lib/postgresql/data
+    depends_on:
+      - redis
+    mem_limit: 2g
+
+  redis:
+    image: redis:7-alpine
+    mem_limit: 128m
+
+volumes:
+  postgres_data:
+  qdrant_data:
+  letta_data:

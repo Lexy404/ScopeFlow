@@ -1,0 +1,4 @@
+# Default local model for ScopeFlow: non-thinking Qwen3 4B instruct with a 16k context.
+# mem0's fact-extraction prompt is ~8k tokens, so the base model's 4k default is too small.
+FROM qwen3:4b-instruct-2507-q4_K_M
+PARAMETER num_ctx 16384

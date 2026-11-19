@@ -1,0 +1,27 @@
+[project]
+name = "scopeflow-backend"
+version = "0.1.0"
+description = "ScopeFlow backend: flow engine, memory scopes, REST/SSE API"
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "alembic>=1.20.1",
+    "asyncpg>=0.32.0",
+    "ddgs>=9.16.1",
+    "fastapi>=0.165.0",
+    "httpx>=0.28.1",
+    "letta-client>=1.12.1",
+    "mem0ai>=2.2.1",
+    "ollama>=0.6.3",
+    "pydantic-settings>=2.16.3",
+    "qdrant-client>=1.20.0",
+    "sqlalchemy[asyncio]>=2",
+    "sse-starlette>=3.7.0",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["app"]
