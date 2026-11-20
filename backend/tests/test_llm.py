@@ -172,23 +172,10 @@ async def test_fake_client_replays_script_and_records_calls() -> None:
 # --- Live Ollama (skipped when Ollama is not running, e.g. in CI) -----------------------
 
 
-@pytest.fixture
-async def live() -> OllamaClient:
-    s = get_settings()
-    try:
-        async with httpx.AsyncClient(timeout=2) as c:
-            await c.get(f"{s.ollama_url}/api/version")
-    except httpx.HTTPError:
-        pytest.skip("Ollama not running")
-    client = OllamaClient(s.ollama_url)
-    if s.default_model not in {m.split(":")[0] for m in await client.list_models()}:
-        pytest.skip(f"model {s.default_model} not installed")
-    return client
-
-
 @pytest.mark.ollama
-async def test_live_tool_call_and_embedding(live: OllamaClient) -> None:
+async def test_live_tool_call_and_embedding(live_ollama: OllamaClient) -> None:
     s = get_settings()
+    live = live_ollama
     r = await live.chat(
         s.default_model,
         [ChatMessage.user("What is 17 * 23? Use the calculator tool.")],

@@ -102,6 +102,40 @@ async def test_web_search_no_results_and_errors() -> None:
         await WebSearch(search=lambda q, n: []).run({"query": "  "})
 
 
+def _flaky(*outcomes: Exception | list[dict[str, Any]]) -> Any:
+    """Search stub returning/raising the given outcomes in order; records call count."""
+    queue = list(outcomes)
+
+    def search(q: str, n: int) -> list[dict[str, Any]]:
+        search.calls += 1  # type: ignore[attr-defined]
+        item = queue.pop(0)
+        if isinstance(item, Exception):
+            raise item
+        return item
+
+    search.calls = 0  # type: ignore[attr-defined]
+    return search
+
+
+async def test_web_search_retries_flaky_empty_result() -> None:
+    hit = [{"title": "T", "href": "https://t.example", "body": "b"}]
+    search = _flaky(DDGSException("No results found."), hit)
+    out = await WebSearch(search=search).run({"query": "q"})
+    assert out.startswith("1. T") and search.calls == 2
+
+
+async def test_web_search_no_results_after_retries_is_not_an_error() -> None:
+    search = _flaky(DDGSException("No results found."), DDGSException("No results found."))
+    assert await WebSearch(search=search).run({"query": "q"}) == "No results."
+    assert search.calls == 2
+
+
+async def test_web_search_real_failure_after_retries_is_an_error() -> None:
+    search = _flaky(DDGSException("ratelimit"), DDGSException("ratelimit"))
+    with pytest.raises(ToolError, match="search failed: ratelimit"):
+        await WebSearch(search=search).run({"query": "q"})
+
+
 # --- registry ---------------------------------------------------------------------------
 
 

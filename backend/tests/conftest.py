@@ -11,6 +11,7 @@ from collections.abc import AsyncIterator, Iterator
 from pathlib import Path
 
 import asyncpg
+import httpx
 import pytest
 from alembic import command
 from alembic.config import Config
@@ -20,6 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from sqlalchemy.pool import NullPool
 
 from app.config import get_settings
+from app.llm import OllamaClient
 
 BACKEND_DIR = Path(__file__).resolve().parents[1]
 
@@ -62,6 +64,21 @@ def test_db_url() -> Iterator[str]:
     command.downgrade(cfg, "base")  # start from a clean schema every test session
     command.upgrade(cfg, "head")
     yield url
+
+
+@pytest.fixture
+async def live_ollama() -> OllamaClient:
+    """Real Ollama client; skips the test when Ollama or the default model is missing."""
+    s = get_settings()
+    try:
+        async with httpx.AsyncClient(timeout=2) as c:
+            await c.get(f"{s.ollama_url}/api/version")
+    except httpx.HTTPError:
+        pytest.skip("Ollama not running")
+    client = OllamaClient(s.ollama_url)
+    if s.default_model not in {m.split(":")[0] for m in await client.list_models()}:
+        pytest.skip(f"model {s.default_model} not installed")
+    return client
 
 
 @pytest.fixture
