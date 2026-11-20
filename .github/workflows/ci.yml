@@ -7,14 +7,31 @@ on:
 jobs:
   backend:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: scopeflow
+          POSTGRES_PASSWORD: scopeflow
+          POSTGRES_DB: scopeflow
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U scopeflow"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+    env:
+      SCOPEFLOW_DATABASE_URL: postgresql+asyncpg://scopeflow:scopeflow@localhost:5433/scopeflow
+      SCOPEFLOW_REQUIRE_DB: "1" # DB tests must run in CI, never skip
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v6
+      - uses: actions/checkout@v7
+      - uses: astral-sh/setup-uv@v10
       - run: uv sync --locked
       - name: Lint
         run: uv run ruff check . && uv run ruff format --check .
       - name: Type check
         run: uv run mypy
       - name: Tests
-        # Unit tests only: no Ollama/Postgres/Letta in CI (fake LLM client, mocked checks).
+        # No Ollama/Letta in CI: LLM is faked in unit tests. Postgres runs as a service.
         run: uv run pytest -q
