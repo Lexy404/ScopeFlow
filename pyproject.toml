@@ -31,6 +31,8 @@ select = ["E", "F", "I", "B", "UP", "ASYNC", "SIM"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["app"]
+# the repo has an ollama/ folder (Modelfiles); without this ruff treats the library as local
+known-third-party = ["ollama"]
 
 [tool.mypy]
 python_version = "3.12"
@@ -42,3 +44,6 @@ files = ["backend/app"]
 testpaths = ["backend/tests"]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+markers = [
+    "ollama: needs a running Ollama with the default models (skipped otherwise)",
+]
